@@ -38,11 +38,17 @@ public class WorkoutService
 
     public async Task DeleteAsync(int id)
     {
-        var workout = await _db.Workouts.FindAsync(id);
-        if (workout != null)
-        {
-            _db.Workouts.Remove(workout);
-            await _db.SaveChangesAsync();
-        }
+        var workout = await _db.Workouts
+            .Include(w => w.Entries)
+            .FirstOrDefaultAsync(w => w.Id == id);
+
+        if (workout == null)
+            return;
+
+        _db.WorkoutEntries.RemoveRange(workout.Entries);
+        _db.Workouts.Remove(workout);
+
+        await _db.SaveChangesAsync();
     }
+
 }

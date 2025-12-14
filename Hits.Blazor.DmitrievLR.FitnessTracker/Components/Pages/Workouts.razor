@@ -4,6 +4,7 @@
 @using Hits.Blazor.DmitrievLR.FitnessTracker.Models
 @using Hits.Blazor.DmitrievLR.FitnessTracker.Services
 
+@inject IJSRuntime JS
 
 @rendermode InteractiveServer
 @inject WorkoutService WorkoutService
@@ -41,10 +42,17 @@ else
                     <td>@w.Date.ToString("dd.MM.yyyy")</td>
                     <td>@w.Comment</td>
                     <td class="text-end">
-                        <a class="btn btn-sm btn-secondary" href="/workouts/@w.Id">
+                        <a class="btn btn-sm btn-secondary me-2"
+                           href="/workouts/@w.Id">
                             Открыть
                         </a>
+
+                        <button class="btn btn-sm btn-danger"
+                                @onclick="() => DeleteWorkout(w.Id)">
+                            Удалить
+                        </button>
                     </td>
+
                 </tr>
             }
         </tbody>
@@ -85,4 +93,22 @@ else
 
         return userId;
     }
+
+
+    private async Task DeleteWorkout(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>(
+            "confirm",
+            "Вы уверены, что хотите удалить тренировку? Это действие нельзя отменить."
+        );
+
+        if (!confirmed)
+            return;
+
+        await WorkoutService.DeleteAsync(id);
+
+        var userId = await GetUserId();
+        workouts = await WorkoutService.GetAllForUserAsync(userId);
+    }
+
 }
