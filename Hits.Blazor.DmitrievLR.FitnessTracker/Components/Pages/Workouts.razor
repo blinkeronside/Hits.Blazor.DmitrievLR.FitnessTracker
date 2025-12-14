@@ -1,0 +1,88 @@
+﻿@page "/workouts"
+@attribute [Authorize]
+
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Models
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Services
+
+
+@rendermode InteractiveServer
+@inject WorkoutService WorkoutService
+@inject AuthenticationStateProvider Auth
+
+
+<h3>Тренировки</h3>
+
+<button class="btn btn-primary mb-3" @onclick="CreateWorkout">
+    Новая тренировка
+</button>
+
+@if (workouts == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!workouts.Any())
+{
+    <p>Тренировок пока нет.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Комментарий</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var w in workouts)
+            {
+                <tr>
+                    <td>@w.Date.ToString("dd.MM.yyyy")</td>
+                    <td>@w.Comment</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-secondary" href="/workouts/@w.Id">
+                            Открыть
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Workout>? workouts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = await GetUserId();
+        workouts = await WorkoutService.GetAllForUserAsync(userId);
+    }
+
+    private async Task CreateWorkout()
+    {
+        var userId = await GetUserId();
+        var id = await WorkoutService.CreateAsync(new Workout
+        {
+            UserId = userId,
+            Date = DateTime.Today
+        });
+
+        NavigationManager.NavigateTo($"/workouts/{id}");
+    }
+
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+
+    private async Task<string> GetUserId()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+
+        var userId = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+            throw new InvalidOperationException("Пользователь не авторизован");
+
+        return userId;
+    }
+}

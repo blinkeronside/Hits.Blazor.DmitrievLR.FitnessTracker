@@ -1,0 +1,94 @@
+﻿
+
+@page "/exercises"
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Models
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Services
+
+@rendermode InteractiveServer
+@inject ExerciseService ExerciseService
+
+<h3>Упражнения</h3>
+
+<button class="btn btn-primary mb-3" @onclick="CreateNew">
+    Добавить упражнение
+</button>
+
+@if (exercises == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!exercises.Any())
+{
+    <p>Упражнений пока нет.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Название</th>
+            <th>Тип</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var exercise in exercises)
+        {
+            <tr>
+                <td>@exercise.Name</td>
+                <td>@exercise.Type</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-secondary me-2"
+                            @onclick="() => Edit(exercise)">
+                        Редактировать
+                    </button>
+                    <button class="btn btn-sm btn-danger"
+                            @onclick="() => Delete(exercise.Id)">
+                        Удалить
+                    </button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<ExerciseForm @ref="form" OnSaved="Reload" />
+
+@code {
+    private List<Exercise>? exercises;
+    private ExerciseForm? form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        exercises = await ExerciseService.GetAllAsync();
+        StateHasChanged();
+    }
+
+    private void CreateNew()
+    {
+        form?.Show(new Exercise());
+    }
+
+    private void Edit(Exercise exercise)
+    {
+        form?.Show(new Exercise
+        {
+            Id = exercise.Id,
+            Name = exercise.Name,
+            Type = exercise.Type,
+            Description = exercise.Description
+        });
+    }
+
+    private async Task Delete(int id)
+    {
+        await ExerciseService.DeleteAsync(id);
+        await Reload();
+    }
+}

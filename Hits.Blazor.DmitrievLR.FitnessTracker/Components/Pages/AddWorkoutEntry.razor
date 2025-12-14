@@ -1,0 +1,88 @@
+﻿@using Hits.Blazor.DmitrievLR.FitnessTracker.Models
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Data
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Services
+@rendermode InteractiveServer
+@inject ApplicationDbContext Db
+
+<div class="card p-3 mt-3">
+    <h6>Добавить упражнение</h6>
+
+    @if (!exercises.Any())
+    {
+        <p class="text-muted">Сначала добавьте упражнения</p>
+    }
+    else
+    {
+        <select class="form-select mb-2" @bind="entry.ExerciseId">
+            @foreach (var e in exercises)
+            {
+                <option value="@e.Id">@e.Name</option>
+            }
+        </select>
+
+        <div class="mb-2">
+            <label class="form-label small text-muted">Подходы</label>
+            <input type="number" class="form-control" @bind="entry.Sets" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label small text-muted">Повторы</label>
+            <input type="number" class="form-control" @bind="entry.Reps" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label small text-muted">Вес (кг)</label>
+            <input type="number" class="form-control" @bind="entry.WeightKg" />
+        </div>
+
+
+        <button class="btn btn-success" @onclick="Add">
+            Добавить
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public int WorkoutId { get; set; }
+    [Parameter] public EventCallback OnAdded { get; set; }
+
+    private List<Exercise> exercises = new();
+    private WorkoutEntry entry = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        exercises = Db.Exercises
+            .OrderBy(e => e.Name)
+            .ToList();
+
+        if (exercises.Any())
+        {
+            ResetEntry();
+        }
+    }
+
+
+    private async Task Add()
+    {
+        if (entry == null)
+            return;
+
+        Db.WorkoutEntries.Add(entry);
+        await Db.SaveChangesAsync();
+
+        ResetEntry();
+        await OnAdded.InvokeAsync();
+    }
+
+    private void ResetEntry()
+    {
+        entry = new WorkoutEntry
+        {
+            WorkoutId = WorkoutId,
+            ExerciseId = exercises.First().Id,
+            Sets = 3,
+            Reps = 10,
+            WeightKg = 0
+        };
+    }
+}

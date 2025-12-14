@@ -1,0 +1,139 @@
+﻿@page "/workouts/{Id:int}"
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Models
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Services
+
+@rendermode InteractiveServer
+@inject WorkoutService WorkoutService
+@inject ExerciseService ExerciseService
+@inject WorkoutEntryService WorkoutEntryService
+
+
+<h3>Тренировка</h3>
+
+@if (workout == null)
+{
+    <p>Загрузка...</p>
+}
+else
+{
+    <p><b>Дата:</b> @workout.Date.ToString("dd.MM.yyyy")</p>
+
+    <h5>Упражнения</h5>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Упражнение</th>
+                <th>Подходы</th>
+                <th>Повторы</th>
+                <th>Вес (кг)</th>
+                <th>Объём</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var e in workout.Entries)
+            {
+                <tr>
+                    <td>@e.Exercise!.Name</td>
+
+                    <td>
+                        <input type="number"
+                               class="form-control form-control-sm"
+                               @bind="e.Sets" />
+                    </td>
+
+                    <td>
+                        <input type="number"
+                               class="form-control form-control-sm"
+                               @bind="e.Reps" />
+                    </td>
+
+                    <td>
+                        <input type="number"
+                               class="form-control form-control-sm"
+                               step="0.5"
+                               @bind="e.WeightKg" />
+                    </td>
+                    <td>
+                        <span class="fw-semibold">@e.Volume</span>
+                        <span class="text-muted small">кг</span>
+                    </td>
+
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-success me-2" title="Сохранить изменения">
+                            💾
+                        </button>
+
+                        <button class="btn btn-sm btn-danger" title="Удалить упражнение">
+                            🗑
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (showSavedMessage)
+    {
+        <div class="alert alert-success mt-3">
+            @savedMessage
+        </div>
+    }
+
+    <div class="alert alert-info mt-3">
+        <div class="fw-bold mb-1">Общий объём тренировки</div>
+        <div>
+            @TotalVolume <span class="text-muted">кг</span>
+        </div>
+        <div class="text-muted small">
+            Формула: подходы × повторы × вес
+        </div>
+    </div>
+
+
+    <AddWorkoutEntry WorkoutId="@workout.Id" OnAdded="Reload" />
+}
+
+@code {
+    private bool showSavedMessage;
+    private string savedMessage = "";
+
+    private decimal TotalVolume =>
+    workout?.Entries.Sum(e => e.Volume) ?? 0;
+
+    [Parameter] public int Id { get; set; }
+    private Workout? workout;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        workout = await WorkoutService.GetByIdAsync(Id);
+        StateHasChanged();
+    }
+
+    private async Task Save(WorkoutEntry entry)
+    {
+        await WorkoutEntryService.UpdateAsync(entry);
+
+        savedMessage = "Изменения сохранены";
+        showSavedMessage = true;
+
+        StateHasChanged();
+
+        await Task.Delay(2000);
+        showSavedMessage = false;
+
+        StateHasChanged();
+    }
+
+    private async Task Delete(int id)
+    {
+        await WorkoutEntryService.DeleteAsync(id);
+        await Reload();
+    }
+
+}

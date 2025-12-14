@@ -1,0 +1,149 @@
+﻿@page "/"
+
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Models
+@using Hits.Blazor.DmitrievLR.FitnessTracker.Services
+@using System.Security.Claims
+
+@inject StatisticsService StatisticsService
+@inject AuthenticationStateProvider Auth
+
+<h3 class="mb-3">Прогресс тренировок</h3>
+
+@if (isLoading)
+{
+    <p>Загрузка статистики...</p>
+}
+else if (!data.Any())
+{
+    <div class="alert alert-warning">
+        Данных нет. Добавьте тренировки с упражнениями.
+    </div>
+}
+else
+{
+    <!-- Карточки статистики -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card text-bg-primary h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div class="stat-title">
+                        Общий объём нагрузки
+                        <span class="info-icon"
+                              data-bs-toggle="tooltip"
+                              title="Показывает суммарную тренировочную нагрузку за все тренировки. Рассчитывается как произведение подходов, повторений и используемого веса. Используется для оценки общего объёма выполненной работы.">
+                            ⓘ
+                        </span>
+                    </div>
+                    <div class="stat-value">@totalVolume.ToString("N0")</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card text-bg-success h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div class="stat-title">
+                        Количество тренировок
+                        <span class="info-icon"
+                              data-bs-toggle="tooltip"
+                              title="Общее количество проведённых тренировок. Используется для оценки регулярности тренировочного процесса.">
+                            ⓘ
+                        </span>
+                    </div>
+                    <div class="stat-value">@workoutCount</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card text-bg-info h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div class="stat-title">
+                        Средний объём нагрузки
+                        <span class="info-icon"
+                              data-bs-toggle="tooltip"
+                              title="Средний объём нагрузки за одну тренировку. Позволяет оценить интенсивность тренировок в среднем, независимо от их количества.">
+                            ⓘ
+                        </span>
+                    </div>
+                    <div class="stat-value">@averageVolume.ToString("N0")</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stat-card text-bg-warning h-100">
+                <div class="card-body d-flex flex-column justify-content-between">
+                    <div class="stat-title">
+                        Максимум за день
+                        <span class="info-icon"
+                              data-bs-toggle="tooltip"
+                              title="Максимальная суммарная нагрузка, выполненная за один день. Используется для выявления наиболее интенсивных тренировочных дней.">
+                            ⓘ
+                        </span>
+                    </div>
+                    <div class="stat-value">@maxVolume.ToString("N0")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Таблица для наглядности -->
+    <table class="table table-bordered stats-table">
+        <thead class="table-light">
+            <tr>
+                <th>Дата</th>
+                <th>Объём нагрузки</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in data)
+            {
+                <tr>
+                    <td>@item.Date.ToString("dd.MM.yyyy")</td>
+                    <td>@item.Volume.ToString("N0")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<WorkoutVolumePoint> data = new();
+    private bool isLoading = true;
+
+    private decimal totalVolume;
+    private int workoutCount;
+    private decimal averageVolume;
+    private decimal maxVolume;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+
+        if (!state.User.Identity?.IsAuthenticated ?? true)
+        {
+            isLoading = false;
+            return;
+        }
+
+        var userId = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            isLoading = false;
+            return;
+        }
+
+        data = await StatisticsService.GetWorkoutVolumesAsync(userId);
+
+        workoutCount = data.Count;
+        totalVolume = data.Sum(x => x.Volume);
+        averageVolume = workoutCount > 0
+            ? Math.Round(totalVolume / workoutCount, 1)
+            : 0;
+        maxVolume = data.Max(x => x.Volume);
+
+        isLoading = false;
+    }
+}

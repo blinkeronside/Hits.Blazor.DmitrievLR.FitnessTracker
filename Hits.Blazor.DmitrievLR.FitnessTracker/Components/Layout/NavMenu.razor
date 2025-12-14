@@ -1,0 +1,82 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<div class="sidebar d-flex flex-column">
+    <!-- Header -->
+    <div class="sidebar-header p-3">
+        <div class="fw-bold fs-5 text-white">
+            Fitness Tracker
+        </div>
+        <div class="text-white-50 small">
+            Hits.Blazor
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav flex-column px-2">
+        <NavLink class="nav-link sidebar-link" href="" Match="NavLinkMatch.All">
+            🏠 Главная
+        </NavLink>
+
+        <div class="sidebar-section">Тренировки</div>
+
+        <NavLink class="nav-link sidebar-link" href="/exercises">
+            💪 Упражнения
+        </NavLink>
+
+        <NavLink class="nav-link sidebar-link" href="/workouts">
+            📅 Тренировки
+        </NavLink>
+    </nav>
+
+    <div class="flex-grow-1"></div>
+
+    <!-- Auth -->
+    <div class="sidebar-footer px-2 pb-3">
+        <AuthorizeView>
+            <Authorized>
+                <div class="text-white-50 small mb-1">
+                    👤 @context.User.Identity?.Name
+                </div>
+
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                    <button type="submit" class="btn btn-outline-light btn-sm w-100">
+                        Выйти
+                    </button>
+                </form>
+            </Authorized>
+
+            <NotAuthorized>
+                <NavLink class="btn btn-outline-light btn-sm w-100 mb-2" href="Account/Login">
+                    Войти
+                </NavLink>
+                <NavLink class="btn btn-outline-secondary btn-sm w-100" href="Account/Register">
+                    Регистрация
+                </NavLink>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</div>
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
